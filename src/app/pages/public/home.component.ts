@@ -313,8 +313,8 @@ export class HomeComponent implements OnInit {
     const c = this.block('contact')?.content || '';
     const parts = c.split('—').map(p => p.trim());
     return {
-      email: parts[0] || '',
-      phone: parts[1] || '',
+      email: 'contactkubinex@gmail.com',
+      phone: '+33 7 80 73 93 84',
       address: parts.slice(2).join(' — ') || '100% en ligne, partout dans le monde',
     };
   }
