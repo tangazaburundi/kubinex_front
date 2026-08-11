@@ -1,0 +1,137 @@
+import { Component, OnInit } from '@angular/core';
+import { NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { ApiService } from '../../services/api.service';
+import { SiteBlock } from '../../models/site-block.model';
+
+@Component({
+  standalone: true,
+  imports: [NgFor, NgIf, FormsModule],
+  template: `
+    <div class="max-w-5xl mx-auto px-4 py-10">
+      <div class="flex items-center justify-between mb-8">
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <button (click)="logout()" class="text-sm text-gray-500 hover:text-red-600 transition">Déconnexion</button>
+      </div>
+
+      <div *ngIf="saving" class="bg-green-100 text-green-700 px-4 py-2 rounded-lg mb-4 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Sauvegardé
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Nouveau bloc</h2>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-500 mb-1">Slug (identifiant)</label>
+            <input [(ngModel)]="newBlock.slug" placeholder="ex: tarifs" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500 mb-1">Ordre</label>
+            <input [(ngModel)]="newBlock.sortOrder" type="number" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none">
+          </div>
+        </div>
+
+        <label class="block text-sm font-medium text-gray-500 mb-1">Titre</label>
+        <input [(ngModel)]="newBlock.title" class="w-full border rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-400 outline-none">
+
+        <label class="block text-sm font-medium text-gray-500 mb-1">Sous-titre</label>
+        <input [(ngModel)]="newBlock.subtitle" class="w-full border rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-400 outline-none">
+
+        <label class="block text-sm font-medium text-gray-500 mb-1">Contenu</label>
+        <textarea [(ngModel)]="newBlock.content" rows="4" class="w-full border rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>
+
+        <button (click)="create()" class="bg-emerald-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
+          Créer le bloc
+        </button>
+      </div>
+
+      <div class="space-y-6">
+        <div *ngFor="let block of blocks" class="bg-white rounded-xl shadow-sm border p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-700 capitalize">{{ block.slug }}</h2>
+              <p class="text-xs text-gray-400">slug: {{ block.slug }}</p>
+            </div>
+            <button (click)="remove(block)" class="flex items-center gap-1 text-sm text-red-600 hover:text-red-700 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Supprimer
+            </button>
+          </div>
+
+          <label class="block text-sm font-medium text-gray-500 mb-1">Titre</label>
+          <input [(ngModel)]="block.title" class="w-full border rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-400 outline-none">
+
+          <label class="block text-sm font-medium text-gray-500 mb-1">Sous-titre</label>
+          <input [(ngModel)]="block.subtitle" class="w-full border rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-400 outline-none">
+
+          <label class="block text-sm font-medium text-gray-500 mb-1">Contenu</label>
+          <textarea [(ngModel)]="block.content" rows="4" class="w-full border rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>
+
+          <label class="block text-sm font-medium text-gray-500 mb-1">Image URL</label>
+          <div class="flex gap-2 mb-3">
+            <input [(ngModel)]="block.imageUrl" class="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none">
+            <input type="file" (change)="uploadImage(block, $event)" class="text-sm">
+          </div>
+
+          <label class="block text-sm font-medium text-gray-500 mb-1">Extra (JSON)</label>
+          <input [(ngModel)]="block.extra" class="w-full border rounded-lg px-3 py-2 mb-4 focus:ring-2 focus:ring-indigo-400 outline-none">
+
+          <button (click)="save(block)" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  `,
+})
+export class DashboardComponent implements OnInit {
+  blocks: SiteBlock[] = [];
+  saving = false;
+  newBlock: SiteBlock = { slug: '', title: '', subtitle: '', content: '', sortOrder: 0 };
+
+  constructor(private api: ApiService, private router: Router) {}
+
+  ngOnInit() {
+    this.load();
+  }
+
+  load() {
+    this.api.getAdminSite().subscribe(b => this.blocks = b);
+  }
+
+  create() {
+    if (!this.newBlock.slug?.trim() || !this.newBlock.title?.trim()) return;
+    this.api.createBlock(this.newBlock).subscribe(() => {
+      this.newBlock = { slug: '', title: '', subtitle: '', content: '', sortOrder: this.blocks.length };
+      this.load();
+    });
+  }
+
+  remove(block: SiteBlock) {
+    if (block.id == null) return;
+    if (!confirm(`Supprimer le bloc « ${block.slug} » ?`)) return;
+    this.api.deleteBlock(block.id).subscribe(() => this.load());
+  }
+
+  save(block: SiteBlock) {
+    if (block.id == null) return;
+    this.api.updateBlock(block.id, block).subscribe(() => {
+      this.saving = true;
+      setTimeout(() => this.saving = false, 2000);
+    });
+  }
+
+  uploadImage(block: SiteBlock, event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    this.api.uploadImage(file).subscribe(url => block.imageUrl = url);
+  }
+
+  logout() {
+    localStorage.removeItem('token');
+    this.router.navigate(['/admin/login']);
+  }
+}
